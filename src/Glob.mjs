@@ -1,4 +1,5 @@
-import {Fs} from "//es.parts/isofs/0.0.1/";
+import * as Fs from "fs";
+
 import {Dict} from "//es.parts/ess/0.0.1/";
 import {List} from "//es.parts/ess/0.0.1/";
 import {Path} from "//es.parts/ess/0.0.1/";
@@ -35,7 +36,7 @@ const findEmptyResult = {};
 ///
 /// # Options
 /// -  `cwd` working directory, defaults to `/`.
-function find(pattern, options={}) {
+async function find(pattern, options={}) {
     const glob = Pattern.create(pattern, {nonegate: 1, nocomment: 1});
     const patterns = List.clone(glob.globset);
 
@@ -44,12 +45,22 @@ function find(pattern, options={}) {
 
     const promises = List.map(patterns, p => process(state, p));
 
-    return Promise.all(promises)
-        .then(results => {
-            const merged = List.foldl(results, findEmptyResult, (a, o) => Dict.merge(a, o));
+    for await (let p of patterns) {
+        const result = await process(state, p);
 
-            return Dict.keys(merged);
-        });
+        if (result) {
+            return result;
+        }
+    }
+
+    return findEmptyResult;
+    //
+    // return Promise.all(promises)
+    //     .then(results => {
+    //         const merged = List.foldl(results, findEmptyResult, (a, o) => Dict.merge(a, o));
+    //
+    //         return Dict.keys(merged);
+    //     });
 }
 
 // Internals
@@ -216,15 +227,14 @@ function processGlobStar(state, remain, prefix, path, files) {
         .then(results => List.foldl(results, findEmptyResult, (a, r) => Dict.merge(a, r)));
 }
 
-function listThen(state, remain, prefix, path, next) {
-    return list(state, path)
-        .then(files => {
-            if (files === null) {
-                return findEmptyResult;
-            }
+async function listThen(state, remain, prefix, path, next) {
+    const files = await list(state, path);
 
-            return next(state, remain, prefix, path, files);
-        });
+    if (files === null) {
+        return findEmptyResult;
+    }
+
+    return next(state, remain, prefix, path, files);
 }
 
 function list(state, path) {

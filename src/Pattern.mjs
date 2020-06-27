@@ -2,8 +2,6 @@
 //!
 //! Based on minimatch by Isaac
 //!
-cflags: "MODE_REVAMP";
-
 import {List} from "//es.parts/ess/0.0.1/";
 import {Str} from "//es.parts/ess/0.0.1/";
 
