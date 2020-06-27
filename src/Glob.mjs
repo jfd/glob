@@ -5,7 +5,7 @@ import {List} from "//es.parts/ess/0.0.1/";
 import {Path} from "//es.parts/ess/0.0.1/";
 import {Str} from "//es.parts/ess/0.0.1/";
 
-import * as Pattern from "./Pattern.js";
+import * as Pattern from "./Pattern.mjs";
 
 export {find};
 

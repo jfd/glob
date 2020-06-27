@@ -1,5 +1,5 @@
-//! Glob for ISOFS
+//! Glob
 //!
 //!
-export * as BraceExpansion from "./src/BraceExpansion.js";
-export * as Glob from "./src/Glob.js";
+export * as BraceExpansion from "./src/BraceExpansion.mjs";
+export * as Glob from "./src/Glob.mjs";

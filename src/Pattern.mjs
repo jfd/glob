@@ -5,7 +5,7 @@
 import {List} from "//es.parts/ess/0.0.1/";
 import {Str} from "//es.parts/ess/0.0.1/";
 
-import * as BraceExpansion from "./BraceExpansion.js";
+import * as BraceExpansion from "./BraceExpansion.mjs";
 
 const QMARK = "[^/]";
 const STAR = "[^/]*?";
