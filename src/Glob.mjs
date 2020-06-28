@@ -45,22 +45,11 @@ async function find(pattern, options={}) {
 
     const promises = List.map(patterns, p => process(state, p));
 
-    for await (let p of patterns) {
-        const result = await process(state, p);
-
-        if (result) {
-            return result;
-        }
-    }
-
-    return findEmptyResult;
-    //
-    // return Promise.all(promises)
-    //     .then(results => {
-    //         const merged = List.foldl(results, findEmptyResult, (a, o) => Dict.merge(a, o));
-    //
-    //         return Dict.keys(merged);
-    //     });
+    return Promise.all(promises)
+        .then(results => {
+            const merged = List.foldl(results, findEmptyResult, (a, o) => Dict.merge(a, o));
+            return Dict.keys(merged);
+        });
 }
 
 // Internals
@@ -121,19 +110,18 @@ function process(state, pattern, inglobstar=false) {
     return listThen(state, remain, prefix, abspath, processList);
 }
 
-function processSimple(state, prefix) {
-    return info(state, prefix)
-        .then(info => {
-            if (info === notFoundInfo) {
-                return;
-            }
+async function processSimple(state, prefix) {
+    const result = await info(state, prefix);
 
-            const needdir = Str.ends(prefix, MATCH_SEP);
+    if (result === notFoundInfo) {
+        return;
+    }
 
-            if (needdir === false || info.type === Fs.TYPE_DIR) {
+    const needdir = Str.ends(prefix, MATCH_SEP);
 
-            }
-        })
+    if (needdir === false || info.type === Fs.TYPE_DIR) {
+
+    }
 }
 
 function processList(state, remain, prefix, path, files) {
@@ -237,44 +225,46 @@ async function listThen(state, remain, prefix, path, next) {
     return next(state, remain, prefix, path, files);
 }
 
-function list(state, path) {
+async function list(state, path) {
     let liststate = state.listcache[path];
 
-    if (!liststate) {
-        liststate = makePromiseState();
-
-        Fs.list(path)
-            .then(files => {
-                List.each(files, p => {
-                    const abspath = findJoin(path, p);
-
-                    if (abspath in state.infocache === false) {
-                        state.infocache[abspath] = foundInfo;
-                    }
-                });
-
-                liststate.resolve(files);
-            })
-            .catch(error => {
-                switch (error.code) {
-                default:
-                    console.log(error);
-                    break;
-
-                case Fs.ERR_NOTSUPPORTED:
-                case Fs.ERR_NONDIRECTORY:
-                    state.infocache[path] = foundInfo;
-                    break;
-
-                case Fs.ERR_NOTFOUND:
-                    state.infocache[path] = notFoundInfo;
-                    break;
-                }
-                liststate.resolve(null);
-            });
+    if (liststate) {
+        return liststate.promise;
     }
 
-    return liststate.promise;
+    liststate = makePromiseState();
+
+    try {
+        const files = await listFiles(path);
+
+        List.each(files, p => {
+            const abspath = findJoin(path, p);
+
+            if (abspath in state.infocache === false) {
+                state.infocache[abspath] = foundInfo;
+            }
+        });
+
+        liststate.resolve(files);
+        return files;
+    } catch (error) {
+        switch (error.code) {
+        default:
+            console.log(error);
+            break;
+
+        case "ENOTSUP":
+        case "ENOTDIR":
+            state.infocache[path] = foundInfo;
+            break;
+
+        case "ENOENT":
+            state.infocache[path] = notFoundInfo;
+            break;
+        }
+        liststate.resolve(null);
+        return null;
+    }
 }
 
 function info(state, path) {
@@ -316,8 +306,8 @@ function info(state, path) {
 
             })
             .catch(error => {
-                if (Fs.isError(error, Fs.ERR_NOTFOUND) ||
-                    Fs.isError(error, Fs.ERR_NONDIRECTORY)) {
+                if (error.code === "ENOENT" ||
+                    error.code === "ENOTDIR") {
                     state.infocache[abspath] = nonInfo;
                     return resolve(nonInfo);
                 }
@@ -359,4 +349,16 @@ function makePromiseState() {
     });
 
     return state;
+}
+
+function listFiles(path) {
+    return new Promise((resolve, reject) => {
+        Fs.readdir(path, (error, content) => {
+            if (error) {
+                return reject(error);
+            }
+
+            return resolve(content);
+        });
+    });
 }
