@@ -1,6 +1,6 @@
 import {Assert} from "//es.parts/ess/0.0.1/";
 
-import * as BraceExpansion from "../src/BraceExpansion.js";
+import * as BraceExpansion from "../src/BraceExpansion.mjs";
 
 export {testIgnoresDollarBrace};
 export {testEmptyOption};

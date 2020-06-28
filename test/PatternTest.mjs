@@ -1,6 +1,6 @@
 import {Assert} from "//es.parts/ess/0.0.1/";
 
-import * as Pattern from "../src/Pattern.js";
+import * as Pattern from "../src/Pattern.mjs";
 
 export {testRequalPatternbing};
 export {testOptionNonNull};
